@@ -19,12 +19,12 @@ const DOMAIN = 'sanooptica.app';
 const APP_URL = 'https://sano-optica.web.app';
 
 const config = {
-  apiKey: 'AIzaSyA8Lhy8g-tJ4-wCOFLTrODY2ChiRHLsbxY',
+  apiKey: 'AIzaSyCrZrFt1Il53T3mkvlGWOUZMbyUDxKifPA',
   authDomain: 'sano-optica.firebaseapp.com',
   projectId: 'sano-optica',
   storageBucket: 'sano-optica.firebasestorage.app',
-  messagingSenderId: '978782153282',
-  appId: '1:978782153282:web:4a0287f46f00d2cb299bdb'
+  messagingSenderId: '925916043011',
+  appId: '1:925916043011:web:1c91a1db1e4c86acf13b36'
 };
 
 // Configuración inicial de cada sede. Los planes, servicios, categorías y demás valores salen de DEFAULT_SETTINGS

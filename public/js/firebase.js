@@ -12,12 +12,12 @@ import {
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 
 export const firebaseConfig = {
-  apiKey: 'AIzaSyA8Lhy8g-tJ4-wCOFLTrODY2ChiRHLsbxY',
+  apiKey: 'AIzaSyCrZrFt1Il53T3mkvlGWOUZMbyUDxKifPA',
   authDomain: 'sano-optica.firebaseapp.com',
   projectId: 'sano-optica',
   storageBucket: 'sano-optica.firebasestorage.app',
-  messagingSenderId: '978782153282',
-  appId: '1:978782153282:web:4a0287f46f00d2cb299bdb',
+  messagingSenderId: '925916043011',
+  appId: '1:925916043011:web:1c91a1db1e4c86acf13b36',
 };
 
 // Emuladores locales solo para pruebas (http://localhost:...?emu=1)
