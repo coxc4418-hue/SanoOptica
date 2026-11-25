@@ -8,7 +8,7 @@ import { rateChip, startBcv } from './bcv.js';
 import { openCountryPicker, salesWa, SALES_PHONE_FMT } from './shared.js';
 import { isStandalone, platform, bindInstallButtons } from './install.js';
 
-export const VERSION = '1.0.0';
+export const VERSION = '1.0.1';
 
 const ROUTES = {
   inicio: { title: 'Inicio', icon: 'home', group: 'Óptica', load: () => import('./views/dashboard.js') },
@@ -249,12 +249,11 @@ async function afterEnter() {
 let pubOff = null;
 function startPublisher() {
   pubOff?.();
-  if (session.isSuper && !store.isDemo) return;
   import('./ops.js').then(({ publishPortals, resetPublished, setPublishScheduler }) => {
     resetPublished();
     const run = debounce(() => publishPortals().catch((e) => console.warn('[portal]', e?.code || e)), 3500);
     setPublishScheduler(run);
-    run();
+    publishPortals().catch((e) => console.warn('[portal]', e?.code || e));
     const offs = ['patients', 'exams', 'orders', 'payments', 'appointments', 'settings', 'inbox'].map((k) => store.on(k, run));
     const iv = setInterval(run, 10 * 60000);
     pubOff = () => { offs.forEach((o) => o()); clearInterval(iv); setPublishScheduler(null); pubOff = null; };

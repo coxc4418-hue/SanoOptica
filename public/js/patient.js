@@ -210,19 +210,22 @@ export function paidDone(p) {
 // PORTAL: QR y enlace
 // ======================================================================
 export async function portalModal(p) {
-  const url = PORTAL_URL(p);
+  const { publishPatientPortal } = await import('./ops.js');
+  const code = await publishPatientPortal(p).catch(() => p.portalCode);
+  const pat = code && code !== p.portalCode ? { ...p, portalCode: code } : p;
+  const url = PORTAL_URL(pat);
   const qr = await qrDataURL(url, 6);
   const m = openModal({
-    title: `Portal de ${esc(p.name.split(' ')[0])}`, size: 'sm',
+    title: `Portal de ${esc(pat.name.split(' ')[0])}`, size: 'sm',
     sub: 'El paciente sigue el estado de sus lentes, ve su fórmula y sus pagos, pide cita y reporta pagos. Sin usuario ni contraseña: solo con este enlace.',
-    body: `<div class="center stack" style="align-items:center"><img src="${qr}" alt="QR" width="220" height="220" style="image-rendering:pixelated;border-radius:12px;background:#fff;padding:6px"><code class="mono" style="font-size:20px;letter-spacing:.15em">${esc(p.portalCode)}</code><input class="input input-ro small" readonly value="${esc(url)}"></div>`,
-    footer: `<button class="btn btn-ghost" data-new>${icon('refresh')} Cambiar código</button><button class="btn btn-secondary" data-copy>${icon('copy')} Copiar</button><a class="btn btn-secondary" href="${esc(url)}" target="_blank" rel="noopener">${icon('external')} Abrir</a>${contactPhone(p) ? `<button class="btn btn-whatsapp" data-wa>${icon('whatsapp')} Enviar</button>` : ''}`
+    body: `<div class="center stack" style="align-items:center"><img src="${qr}" alt="QR" width="220" height="220" style="image-rendering:pixelated;border-radius:12px;background:#fff;padding:6px"><code class="mono" style="font-size:20px;letter-spacing:.15em">${esc(pat.portalCode)}</code><input class="input input-ro small" readonly value="${esc(url)}"></div>`,
+    footer: `<button class="btn btn-ghost" data-new>${icon('refresh')} Cambiar código</button><button class="btn btn-secondary" data-copy>${icon('copy')} Copiar</button><a class="btn btn-secondary" href="${esc(url)}" target="_blank" rel="noopener">${icon('external')} Abrir</a>${contactPhone(pat) ? `<button class="btn btn-whatsapp" data-wa>${icon('whatsapp')} Enviar</button>` : ''}`
   });
   m.el.querySelector('[data-copy]').onclick = async () => { try { await navigator.clipboard.writeText(url); toast('Enlace copiado'); } catch (_) { toast('No se pudo copiar', 'warning'); } };
-  m.el.querySelector('[data-wa]')?.addEventListener('click', () => waPatient('portal', { patient: p }));
+  m.el.querySelector('[data-wa]')?.addEventListener('click', () => waPatient('portal', { patient: pat }));
   m.el.querySelector('[data-new]').onclick = async () => {
     if (!(await confirmDialog({ title: 'Cambiar el código del portal', message: 'El enlace anterior dejará de funcionar.', confirmText: 'Cambiar' }))) return;
-    await renewPortalCode(p); m.close(); toast('Código renovado'); portalModal(store.patient(p.id));
+    await renewPortalCode(pat); m.close(); toast('Código renovado'); portalModal(store.patient(pat.id) || pat);
   };
 }
 

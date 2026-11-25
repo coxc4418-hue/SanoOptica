@@ -88,7 +88,7 @@ export function mount(el, { enter, logout }) {
         const sales = await tenantSalesSince(t.id, since);
         const open = null;
         const ok = sales.filter((s) => s.status !== 'voided');
-        stats[t.id] = { total: ok.reduce((a, s) => a + (s.received || 0), 0), count: ok.length, open };
+        stats[t.id] = { total: ok.reduce((a, s) => a + (Number(s.total ?? s.amount ?? s.received) || 0), 0), count: ok.length, open };
       } catch (_) { stats[t.id] = { total: 0, count: 0, open: null }; }
     }));
     if (alive) render();

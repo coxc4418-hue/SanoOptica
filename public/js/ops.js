@@ -47,26 +47,35 @@ export async function savePatient(data, id = null) {
   if (id) {
     b.set(store.ref('patients', id), { ...d, updatedAt: nowISO() }, { merge: true });
     await store.commit(b);
+    const saved = { id, ...store.patient(id), ...d };
+    if (saved.active !== false && saved.portalCode) await publishPatientPortal(saved).catch((e) => console.warn('[portal]', e?.code || e));
     resetPublished();
-    return { id, ...store.patient(id), ...d };
+    return saved;
   }
   const ref = store.newRef('patients');
   const code = fmtSeq('P', store.nextSeq(b, 'patient'), 5);
   const full = { ...d, code, portalCode: genCode(8), active: true, createdAt: nowISO(), by: by() };
   b.set(ref, full);
   await store.commit(b);
+  const saved = { id: ref.id, ...full };
+  await publishPatientPortal(saved).catch((e) => console.warn('[portal]', e?.code || e));
   resetPublished();
-  return { id: ref.id, ...full };
+  return saved;
 }
 export async function setPatientActive(p, active) { await store.save('patients', p.id, { active, updatedAt: nowISO() }); resetPublished(); }
 export async function renewPortalCode(p) {
   const old = p.portalCode;
   const code = genCode(8);
+  const updated = { ...p, portalCode: code };
+  const docData = JSON.parse(JSON.stringify(portalDoc(updated)));
   const b = store.batch();
   b.set(store.ref('patients', p.id), { portalCode: code, updatedAt: nowISO() }, { merge: true });
   if (old) b.delete(store.portalRef(old));
+  if (updated.active !== false) b.set(store.portalRef(code), docData);
   await store.commit(b);
-  resetPublished();
+  published.delete('p:' + old);
+  const { updatedAt, ...cmp } = docData;
+  published.set('p:' + code, JSON.stringify(cmp));
   return code;
 }
 /** Importa pacientes desde filas de CSV (nombre, cédula, teléfono, correo, nacimiento…) */
@@ -489,10 +498,32 @@ export function bookingDoc() {
   };
 }
 /** Asegura que la óptica tenga su código para el enlace de la agenda en línea */
+export async function publishPatientPortal(p) {
+  if (!store.tenantId || !p) return null;
+  let pat = p;
+  if (!pat.portalCode) {
+    const code = genCode(8);
+    const b0 = store.batch(); b0.set(store.ref('patients', pat.id), { portalCode: code, updatedAt: nowISO() }, { merge: true }); await store.commit(b0);
+    pat = { ...pat, portalCode: code };
+  }
+  const data = JSON.parse(JSON.stringify(portalDoc(pat)));
+  const { updatedAt, ...cmp } = data;
+  const b = store.batch(); b.set(store.portalRef(pat.portalCode), data); await store.commit(b);
+  published.set('p:' + pat.portalCode, JSON.stringify(cmp));
+  return pat.portalCode;
+}
 export async function ensureBookingCode() {
-  if (store.settings.bookingCode) return store.settings.bookingCode;
-  const code = genCode(6);
-  await store.saveSettings({ bookingCode: code });
+  if (!store.settings.bookingCode) {
+    const code = genCode(6);
+    await store.saveSettings({ bookingCode: code });
+  }
+  const code = store.settings.bookingCode;
+  if (code) {
+    const data = JSON.parse(JSON.stringify(bookingDoc()));
+    const { updatedAt, ...cmp } = data;
+    const b = store.batch(); b.set(store.bookingRef(code), data); await store.commit(b).catch(() => {});
+    published.set('b:' + code, JSON.stringify(cmp));
+  }
   return code;
 }
 /** Horas libres de un día para la agenda (oficina y en línea) */
@@ -505,7 +536,7 @@ export function setPublishScheduler(fn) { schedulePublish = fn; }
 /** Publica (solo lo que cambió) el portal de cada paciente, sus fórmulas verificables y la agenda en línea */
 export async function publishPortals() {
   if (!store.tenantId || !store.ready) return 0;
-  if (!store.settings.bookingCode) { await ensureBookingCode().catch(() => {}); return 0; }
+  if (!store.settings.bookingCode) { await store.saveSettings({ bookingCode: genCode(6) }).catch(() => {}); }
   const ops = [];
   const add = (key, ref, d) => {
     const data = JSON.parse(JSON.stringify(d));
@@ -516,7 +547,7 @@ export async function publishPortals() {
   };
   for (const p of store.patients) if (p.portalCode) add('p:' + p.portalCode, store.portalRef(p.portalCode), portalDoc(p));
   for (const ex of store.exams) if (ex.verify) add('r:' + ex.verify, store.rxRef(ex.verify), rxDoc(ex));
-  add('b:' + store.settings.bookingCode, store.bookingRef(store.settings.bookingCode), bookingDoc());
+  if (store.settings.bookingCode) add('b:' + store.settings.bookingCode, store.bookingRef(store.settings.bookingCode), bookingDoc());
   if (!ops.length) return 0;
   await chunked(ops.map((o) => o.fn), 50);
   ops.forEach((o) => published.set(o.key, o.h));
