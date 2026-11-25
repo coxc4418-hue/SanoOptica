@@ -251,10 +251,13 @@ function startPublisher() {
   pubOff?.();
   import('./ops.js').then(({ publishPortals, resetPublished, setPublishScheduler }) => {
     resetPublished();
-    const run = debounce(() => publishPortals().catch((e) => console.warn('[portal]', e?.code || e)), 3500);
+    let didFirst = false;
+    const fire = () => publishPortals().then((n) => { if (n > 0) didFirst = true; }).catch((e) => console.warn('[portal]', e?.code || e));
+    const run = debounce(fire, 1200);
+    const onChange = () => { if (!didFirst) fire(); else run(); };
     setPublishScheduler(run);
-    publishPortals().catch((e) => console.warn('[portal]', e?.code || e));
-    const offs = ['patients', 'exams', 'orders', 'payments', 'appointments', 'settings', 'inbox'].map((k) => store.on(k, run));
+    fire();
+    const offs = ['patients', 'exams', 'orders', 'payments', 'appointments', 'settings', 'inbox'].map((k) => store.on(k, onChange));
     const iv = setInterval(run, 10 * 60000);
     pubOff = () => { offs.forEach((o) => o()); clearInterval(iv); setPublishScheduler(null); pubOff = null; };
   });

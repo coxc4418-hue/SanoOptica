@@ -1,5 +1,5 @@
 // SanoÓptica — Service Worker (PWA, funcionamiento sin conexión)
-const VERSION = 'sanooptica-v1.0.1';
+const VERSION = 'sanooptica-v1.0.2';
 const SDK = 'https://www.gstatic.com/firebasejs/10.14.1/';
 const VIEWS = ['admin', 'agenda', 'booking', 'cash', 'collect', 'dashboard', 'exams', 'expenses', 'inventory', 'labs', 'orders', 'patients', 'portal', 'pos', 'reminders', 'reports', 'search', 'settings', 'verify'];
 const SHELL = [
